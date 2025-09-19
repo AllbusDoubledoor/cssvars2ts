@@ -9,6 +9,9 @@ const get_var_name_value = @import("./helpers/get_var_name_value.zig").get_var_n
 const VarNameResult = @import("./helpers/get_var_name_value.zig").VarNameResult;
 const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css_var_to_camel_case;
 
+const OUTPUT_DIR_PATH = "./output";
+const OUTPUT_FILE = "cssProperties.ts";
+
 pub fn main() !void {
     // Allocator
     var gpa = std.heap.DebugAllocator(.{}){};
@@ -27,7 +30,7 @@ pub fn main() !void {
     }
 
     // CSS File parsing
-    const file = std.fs.cwd().openFile("./src/test.css", .{ .mode = .read_only }) catch |err| {
+    const file = std.fs.cwd().openFile("./resources/test/test.css", .{ .mode = .read_only }) catch |err| {
         switch (err) {
             error.FileNotFound => {
                 print("Could not find the file\n", .{});
@@ -81,7 +84,21 @@ pub fn main() !void {
     }
 
     // Generate TS file
-    const outputFile = try std.fs.cwd().createFile("output.ts", .{});
+    const cwd = std.fs.cwd();
+    cwd.makeDir(OUTPUT_DIR_PATH) catch |err| {
+        switch (err) {
+            std.posix.MakeDirError.PathAlreadyExists => print("Output directory already exists. OK.\n", .{}),
+            else => {
+                print("Output directory hasn't been created. Error: {any}", .{err});
+                return;
+            },
+        }
+    };
+
+    var output_dir: std.fs.Dir = try cwd.openDir(OUTPUT_DIR_PATH, .{ .access_sub_paths = true });
+    defer output_dir.close();
+
+    const outputFile = try output_dir.createFile(OUTPUT_FILE, .{});
     defer outputFile.close();
 
     var out_writer_buf: [512]u8 = undefined;
