@@ -10,4 +10,7 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    b.step("run", "Build and run the program").dependOn(&run_cmd.step);
 }
