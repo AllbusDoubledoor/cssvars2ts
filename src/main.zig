@@ -29,8 +29,18 @@ pub fn main() !void {
         }
     }
 
+    const exe_dir = try std.fs.selfExeDirPathAlloc(a);
+    defer a.free(exe_dir);
+
+    const zig_out = std.fs.path.dirname(exe_dir) orelse exe_dir;
+
+    const file_path = std.fs.path.join(aa, &.{ zig_out, "test/assets/test_css.scss" }) catch |err| {
+        print("Couldn't join parts of the test scss file: {any}", .{err});
+        return;
+    };
+
     // CSS File parsing
-    const file = std.fs.cwd().openFile("./resources/test/test.css", .{ .mode = .read_only }) catch |err| {
+    const file = std.fs.cwd().openFile(file_path, .{ .mode = .read_only }) catch |err| {
         switch (err) {
             error.FileNotFound => {
                 print("Could not find the file\n", .{});
@@ -74,14 +84,14 @@ pub fn main() !void {
     }
 
     // Debug output
-    {
-        print("Parsed results:\n", .{});
-        var li: usize = 0;
-        while (li < parsing_results.len) : (li += 1) {
-            const res = parsing_results.get(li);
-            print("{any}. {s} = {s}\n", .{ li + 1, res.name, res.value });
-        }
-    }
+    // {
+    //     print("Parsed results:\n", .{});
+    //     var li: usize = 0;
+    //     while (li < parsing_results.len) : (li += 1) {
+    //         const res = parsing_results.get(li);
+    //         print("{any}. {s} = {s}\n", .{ li + 1, res.name, res.value });
+    //     }
+    // }
 
     // Generate TS file
     const cwd = std.fs.cwd();
@@ -95,7 +105,7 @@ pub fn main() !void {
         }
     };
 
-    var output_dir: std.fs.Dir = try cwd.openDir(OUTPUT_DIR_PATH, .{ .access_sub_paths = true });
+    var output_dir: std.fs.Dir = try cwd.openDir(OUTPUT_DIR_PATH, .{});
     defer output_dir.close();
 
     const outputFile = try output_dir.createFile(OUTPUT_FILE, .{});

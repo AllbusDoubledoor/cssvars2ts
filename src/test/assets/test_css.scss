@@ -1,0 +1,57 @@
+:root {
+  // project common colors
+  --project-blue: #0037BF;
+  --project-dark-grey: #36373F;
+  --project-light-grey: #C6C6C6;
+  --project-very-light-grey: #FAFAFA;
+  --project-dark-bg: #25262C;
+  --project-viewer-bg: #374043;
+  --project-darken-light-grey: #999999;
+  --project-grey-dark2: #52545C;
+
+  // Dark Theme Colors
+  --project-dark-theme-blue: var(--project-blue);
+  --project-dark-theme-light-blue: #44A6FF;
+  --project-dark-theme-red: #FF3636;
+  --project-dark-theme-green: #7DD836;
+  --project-dark-theme-orange: #FFA901;
+  --project-dark-theme-medium-grey: #41434E;
+
+  // Light Theme Colors
+  --project-light-theme-blue: #214397;
+  --project-light-theme-light-blue: #0086FF;
+  --project-light-theme-red: #DE0000;
+  --project-light-theme-green: #60AC3C;
+  --project-light-theme-orange: #FF7A00;
+  --project-light-frost-blue: #F2F9FF;
+
+  // Quasar Colors
+  --q-color-primary: #FF5D31;
+  --q-color-secondary: #26A69A;
+  --q-color-accent: #9C27B0;
+
+  --q-color-dark: #333840;
+  --q-color-dark-page: #25262C;
+
+  --q-color-positive: #21BA45;
+  --q-color-negative: #FF3131;
+  --q-color-info: #31CCEC;
+  --q-color-warning: #F2C037;
+
+  // Other Varibales
+  --body-min-width: 320px;
+  --space-base: 16px;
+  --space-xs: calc(var(--space-base) * .25);
+  --space-sm: calc(var(--space-base) * .5);
+  --space-md: calc(var(--space-base));
+  --space-lg: calc(var(--space-base) * 1.5);
+  --space-xl: calc(var(--space-base) * 3);
+
+  --bp-xs: 599px;
+  --bp-sm: 1023px;
+  --bp-md: 1439px;
+  --bp-lg: 1919px;
+
+  // project Table
+  --project-dark-bg-even-rows: #303137;
+}

@@ -11,7 +11,6 @@ pub fn css_var_to_camel_case(a: std.mem.Allocator, variable_name: []const u8) ![
 
     var insert_i: usize = @intCast(first_part.len);
     while (variable_name_iter.next()) |name_part| {
-        print("part: {s}\n", .{name_part});
         var buf: [1]u8 = undefined;
         buf[0] = std.ascii.toUpper(name_part[0]);
         @memcpy(
@@ -28,8 +27,6 @@ pub fn css_var_to_camel_case(a: std.mem.Allocator, variable_name: []const u8) ![
             insert_i += name_part.len - 1;
         }
     }
-
-    print("original: {s}, copy: {s}\n", .{ variable_name, camel_cased_name });
 
     return camel_cased_name;
 }

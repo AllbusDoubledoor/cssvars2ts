@@ -1,6 +1,5 @@
 main
 output
-resources/test
 .zig-cache
 zig-out
 
