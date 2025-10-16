@@ -43,8 +43,6 @@ pub const Config = struct {
                 if (std.mem.eql(u8, entry.name, "cv2ts.json")) {
                     break :outer;
                 }
-            } else {
-                break;
             }
 
             cur_path = std.fs.path.dirname(cur_path) orelse return Error.AppRootNotFound;
