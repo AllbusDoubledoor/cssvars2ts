@@ -1,5 +1,4 @@
 const std = @import("std");
-const print = std.debug.print;
 
 pub const Config = struct {
     a: std.mem.Allocator,
@@ -31,30 +30,24 @@ pub const Config = struct {
         self.a.free(self.target_app_dir);
     }
 
-    // TODO: consider some other stops, maybe .git file or node_modules
+    // TODO: consider some other stopping indicators, maybe .git file or node_modules
     fn get_app_root_path(start: []const u8) ![]const u8 {
         var cur_path = start[0..];
 
         outer: while (cur_path.len != 0) {
-            print("Checking {s}:\n", .{cur_path});
-
             var cur_dir = try std.fs.cwd().openDir(cur_path, .{ .iterate = true });
             defer cur_dir.close();
 
             var iter = cur_dir.iterate();
             while (try iter.next()) |entry| {
                 if (std.mem.eql(u8, entry.name, "cv2ts.json")) {
-                    print("    found\n", .{});
                     break :outer;
                 }
             } else {
-                print("    not found\n", .{});
                 break;
             }
 
             cur_path = std.fs.path.dirname(cur_path) orelse return Error.AppRootNotFound;
-
-            print("    going to {s}\n", .{cur_path});
         }
 
         return cur_path;
