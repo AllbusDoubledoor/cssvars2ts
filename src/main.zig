@@ -9,11 +9,14 @@ const get_var_name_value = @import("./helpers/get_var_name_value.zig").get_var_n
 const VarNameResult = @import("./helpers/get_var_name_value.zig").VarNameResult;
 const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css_var_to_camel_case;
 
+const Config = @import("./Config.zig").Config;
+
+// TODO: take these from config
+const INPUT_FILE = "test/assets/test_css.scss";
 const OUTPUT_DIR_PATH = "./output";
 const OUTPUT_FILE = "cssProperties.ts";
 
 pub fn main() !void {
-    // Allocator
     var gpa = std.heap.DebugAllocator(.{}){};
     const a = gpa.allocator();
 
@@ -29,12 +32,17 @@ pub fn main() !void {
         }
     }
 
-    const exe_dir = try std.fs.selfExeDirPathAlloc(a);
-    defer a.free(exe_dir);
+    var config = try Config.init(a);
+    defer config.deinit();
 
-    const zig_out = std.fs.path.dirname(exe_dir) orelse exe_dir;
+    print("Config.lib_root: {s}\n", .{config.lib_root});
+    print("Config.target_app_dir: {s}\n", .{config.target_app_dir});
 
-    const file_path = std.fs.path.join(aa, &.{ zig_out, "test/assets/test_css.scss" }) catch |err| {
+    const project_container_path = config.target_app_dir;
+
+    print("project container: {s}\n", .{project_container_path});
+
+    const file_path = std.fs.path.join(aa, &.{ project_container_path, INPUT_FILE }) catch |err| {
         print("Couldn't join parts of the test scss file: {any}", .{err});
         return;
     };
@@ -82,16 +90,6 @@ pub fn main() !void {
             print("Unkonwn error reading file: {any}\n", .{err});
         }
     }
-
-    // Debug output
-    // {
-    //     print("Parsed results:\n", .{});
-    //     var li: usize = 0;
-    //     while (li < parsing_results.len) : (li += 1) {
-    //         const res = parsing_results.get(li);
-    //         print("{any}. {s} = {s}\n", .{ li + 1, res.name, res.value });
-    //     }
-    // }
 
     // Generate TS file
     const cwd = std.fs.cwd();
