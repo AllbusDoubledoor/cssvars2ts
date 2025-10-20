@@ -1,10 +1,21 @@
 const std = @import("std");
+const print = std.debug.print;
+
+const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
+
+const ConfigStructure = struct {
+    output: []u8,
+};
 
 pub const Config = struct {
     a: std.mem.Allocator,
 
+    /// Root of the built library which is "zig-out" directory
     lib_root: []const u8,
+    /// Directory of the project where the lib is being used
     target_app_dir: []const u8,
+
+    output: []const u8,
 
     pub fn init(a: std.mem.Allocator) !@This() {
         const bin = try std.fs.selfExeDirPathAlloc(a);
@@ -18,16 +29,29 @@ pub const Config = struct {
         const target_app_dir_buffer = try a.alloc(u8, dir_containing_config.len);
         @memmove(target_app_dir_buffer, dir_containing_config);
 
+        const config_path: []u8 = try std.fs.path.join(a, &.{ target_app_dir_buffer, CONFIG_FILE_NAME });
+        defer a.free(config_path);
+
+        const config_file = try std.fs.cwd().readFileAlloc(a, config_path, 4048);
+        defer a.free(config_file);
+
+        const config_json: std.json.Parsed(ConfigStructure) = try std.json.parseFromSlice(ConfigStructure, a, config_file, .{ .ignore_unknown_fields = true });
+        defer config_json.deinit();
+        const output_buffer = try a.alloc(u8, config_json.value.output.len);
+        @memmove(output_buffer, config_json.value.output);
+
         return .{
             .a = a,
             .lib_root = lib_root_buffer,
             .target_app_dir = target_app_dir_buffer,
+            .output = output_buffer,
         };
     }
 
     pub fn deinit(self: *@This()) void {
         self.a.free(self.lib_root);
         self.a.free(self.target_app_dir);
+        self.a.free(self.output);
     }
 
     // TODO: consider some other stopping indicators, maybe .git file or node_modules
@@ -40,7 +64,7 @@ pub const Config = struct {
 
             var iter = cur_dir.iterate();
             while (try iter.next()) |entry| {
-                if (std.mem.eql(u8, entry.name, "cv2ts.json")) {
+                if (std.mem.eql(u8, entry.name, CONFIG_FILE_NAME)) {
                     break :outer;
                 }
             }

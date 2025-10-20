@@ -12,7 +12,8 @@ const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css
 const Config = @import("./Config.zig").Config;
 
 // TODO: take these from config
-const INPUT_FILE = "test/assets/test_css.scss";
+pub const CONFIG_FILE_NAME = "cv2ts.json";
+const INPUT_FILE = "./test.scss";
 const OUTPUT_DIR_PATH = "./output";
 const OUTPUT_FILE = "cssProperties.ts";
 
@@ -27,16 +28,18 @@ pub fn main() !void {
         arena.deinit();
         const is_leaking = gpa.deinit();
         switch (is_leaking) {
-            .leak => print("... Leaking ...\n", .{}),
-            .ok => print("... No leaks ...\n", .{}),
+            .leak => print("...\n... Leaking ...\n...\n", .{}),
+            .ok => print("...\n... No leaks ...\n...\n", .{}),
         }
     }
 
     var config = try Config.init(a);
     defer config.deinit();
 
-    print("Config.lib_root: {s}\n", .{config.lib_root});
-    print("Config.target_app_dir: {s}\n", .{config.target_app_dir});
+    print("Config:\n", .{});
+    print("    lib_root: {s}\n", .{config.lib_root});
+    print("    target_app_dir: {s}\n", .{config.target_app_dir});
+    print("    output: {s}\n", .{config.output});
 
     const project_container_path = config.target_app_dir;
 
@@ -48,7 +51,7 @@ pub fn main() !void {
     };
 
     // CSS File parsing
-    const file = std.fs.cwd().openFile(file_path, .{ .mode = .read_only }) catch |err| {
+    const input_file = std.fs.cwd().openFile(file_path, .{ .mode = .read_only }) catch |err| {
         switch (err) {
             error.FileNotFound => {
                 print("Could not find the file\n", .{});
@@ -59,9 +62,9 @@ pub fn main() !void {
         }
         return;
     };
-    defer file.close();
+    defer input_file.close();
 
-    const file_stat = file.stat() catch |err| {
+    const file_stat = input_file.stat() catch |err| {
         print("Error getting file stats: {any}\n", .{err});
         return;
     };
@@ -69,8 +72,8 @@ pub fn main() !void {
         print("Couldn't allocate enough memory. Error: {any}\n", .{err});
         return;
     };
-    print("Allocated buffer is {} bytes\n", .{buffer.len});
-    var r_impl = file.reader(buffer);
+
+    var r_impl = input_file.reader(buffer);
     const r = &r_impl.interface;
 
     var parsing_results = MultiArrayList(VarNameResult){};
