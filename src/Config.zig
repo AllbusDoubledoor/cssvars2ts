@@ -9,7 +9,8 @@ const ConfigStructure = struct {
     outputObjectName: []u8,
 };
 
-a: std.mem.Allocator,
+arena: std.heap.ArenaAllocator,
+allocator: std.mem.Allocator,
 
 /// Root of the built library which is "zig-out" directory
 lib_root: []const u8,
@@ -21,15 +22,18 @@ file_name: ?[]const u8 = null,
 output_object_name: ?[]const u8 = null,
 
 pub fn init(a: std.mem.Allocator) !@This() {
+    var arena = std.heap.ArenaAllocator.init(a);
+    var allocator = arena.allocator();
+
     const bin = try std.fs.selfExeDirPathAlloc(a);
     defer a.free(bin);
 
     const zig_out = std.fs.path.dirname(bin) orelse bin;
-    const lib_root_buffer = try a.alloc(u8, zig_out.len);
+    const lib_root_buffer = try allocator.alloc(u8, zig_out.len);
     @memmove(lib_root_buffer, zig_out);
 
     const dir_containing_config = try get_app_root_path(zig_out);
-    const target_app_dir_buffer = try a.alloc(u8, dir_containing_config.len);
+    const target_app_dir_buffer = try allocator.alloc(u8, dir_containing_config.len);
     @memmove(target_app_dir_buffer, dir_containing_config);
 
     const config_path: []u8 = try std.fs.path.join(a, &.{ target_app_dir_buffer, CONFIG_FILE_NAME });
@@ -41,17 +45,18 @@ pub fn init(a: std.mem.Allocator) !@This() {
     const config_json: std.json.Parsed(ConfigStructure) = try std.json.parseFromSlice(ConfigStructure, a, config_file, .{ .ignore_unknown_fields = true });
     defer config_json.deinit();
 
-    const output_buffer = try a.alloc(u8, config_json.value.output.len);
+    const output_buffer = try allocator.alloc(u8, config_json.value.output.len);
     @memmove(output_buffer, config_json.value.output);
 
-    const file_name_buffer = try a.alloc(u8, config_json.value.fileName.len);
+    const file_name_buffer = try allocator.alloc(u8, config_json.value.fileName.len);
     @memmove(file_name_buffer, config_json.value.fileName);
 
-    const output_object_name_buffer = try a.alloc(u8, config_json.value.outputObjectName.len);
+    const output_object_name_buffer = try allocator.alloc(u8, config_json.value.outputObjectName.len);
     @memmove(output_object_name_buffer, config_json.value.outputObjectName);
 
     return .{
-        .a = a,
+        .arena = arena,
+        .allocator = allocator,
         .lib_root = lib_root_buffer,
         .target_app_dir = target_app_dir_buffer,
         .output = output_buffer,
@@ -61,15 +66,7 @@ pub fn init(a: std.mem.Allocator) !@This() {
 }
 
 pub fn deinit(self: *@This()) void {
-    self.a.free(self.lib_root);
-    self.a.free(self.target_app_dir);
-    self.a.free(self.output);
-    if (self.file_name) |file_name| {
-        self.a.free(file_name);
-    }
-    if (self.output_object_name) |output_object_name| {
-        self.a.free(output_object_name);
-    }
+    self.arena.deinit();
 }
 
 // TODO: consider some other stopping indicators, maybe .git file or node_modules
