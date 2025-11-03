@@ -3,12 +3,6 @@ const print = std.debug.print;
 
 const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
 
-const ConfigStructure = struct {
-    output: []u8,
-    fileName: []u8,
-    outputObjectName: []u8,
-};
-
 arena: std.heap.ArenaAllocator,
 allocator: std.mem.Allocator,
 
@@ -92,4 +86,10 @@ fn get_app_root_path(start: []const u8) ![]const u8 {
 
 pub const Error = error{
     AppRootNotFound,
+};
+
+const ConfigStructure = struct {
+    output: []u8,
+    fileName: []u8,
+    outputObjectName: []u8,
 };
