@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const print = std.debug.print;
 const assert = std.debug.assert;
 const expect = std.testing.expect;
@@ -23,23 +24,30 @@ pub fn main() !void {
 
     defer {
         const is_leaking = gpa.deinit();
-        switch (is_leaking) {
-            .leak => print("...\n... Leaking ...\n...\n", .{}),
-            .ok => print("...\n... No leaks ...\n...\n", .{}),
+
+        if (builtin.mode == .Debug) {
+            switch (is_leaking) {
+                .leak => print("...\n... Leaking ...\n...\n", .{}),
+                .ok => print("...\n... No leaks ...\n...\n", .{}),
+            }
         }
     }
 
     var config = try Config.init(a);
     defer config.deinit();
 
-    print("Config:\n", .{});
-    print("    lib_root: {s}\n", .{config.lib_root});
-    print("    target_app_dir: {s}\n", .{config.target_app_dir});
-    print("    output: {s}\n", .{config.output});
+    if (builtin.mode == .Debug) {
+        print("Config:\n", .{});
+        print("    lib_root: {s}\n", .{config.lib_root});
+        print("    target_app_dir: {s}\n", .{config.target_app_dir});
+        print("    output: {s}\n", .{config.output});
+    }
 
     const project_container_path = config.target_app_dir;
 
-    print("project container: {s}\n", .{project_container_path});
+    if (builtin.mode == .Debug) {
+        print("project container: {s}\n", .{project_container_path});
+    }
 
     const file_path = std.fs.path.join(a, &.{ project_container_path, INPUT_FILE }) catch |err| {
         print("Couldn't join parts of the test scss file: {any}", .{err});
@@ -65,13 +73,13 @@ pub fn main() !void {
         print("Error getting file stats: {any}\n", .{err});
         return;
     };
-    const buffer = a.alloc(u8, file_stat.size) catch |err| {
+    const input_file_buffer = a.alloc(u8, file_stat.size) catch |err| {
         print("Couldn't allocate enough memory. Error: {any}\n", .{err});
         return;
     };
-    defer a.free(buffer);
+    defer a.free(input_file_buffer);
 
-    var r_impl = input_file.reader(buffer);
+    var r_impl = input_file.reader(input_file_buffer);
     const r = &r_impl.interface;
 
     var parsing_results = MultiArrayList(VarNameResult){};
@@ -86,7 +94,8 @@ pub fn main() !void {
         }
     } else |err| {
         if (err == error.EndOfStream) {
-            print("File is read\n", .{});
+            if (builtin.mode == .Debug)
+                print("File is read\n", .{});
         } else {
             print("Unkonwn error reading file: {any}\n", .{err});
         }
