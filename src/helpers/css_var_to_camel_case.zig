@@ -1,6 +1,7 @@
 const std = @import("std");
 const print = std.debug.print;
 
+/// Caller must free the memory
 pub fn css_var_to_camel_case(a: std.mem.Allocator, variable_name: []const u8) ![]const u8 {
     var variable_name_iter = std.mem.splitScalar(u8, variable_name, '-');
     const dashes_count = std.mem.count(u8, variable_name, "-");

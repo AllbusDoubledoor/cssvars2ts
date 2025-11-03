@@ -14,18 +14,14 @@ const Config = @import("./Config.zig").Config;
 // TODO: take these from config
 pub const CONFIG_FILE_NAME = "cv2ts.json";
 const INPUT_FILE = "./test.scss";
-const OUTPUT_DIR_PATH = "./output";
-const OUTPUT_FILE = "cssProperties.ts";
+const OUTPUT_DEFAULT_FILE: []const u8 = "cssProperties";
+const DEFAULT_FILE_EXTENSION: []const u8 = "ts";
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
     const a = gpa.allocator();
 
-    var arena = std.heap.ArenaAllocator.init(a);
-    const aa = arena.allocator();
-
     defer {
-        arena.deinit();
         const is_leaking = gpa.deinit();
         switch (is_leaking) {
             .leak => print("...\n... Leaking ...\n...\n", .{}),
@@ -45,10 +41,11 @@ pub fn main() !void {
 
     print("project container: {s}\n", .{project_container_path});
 
-    const file_path = std.fs.path.join(aa, &.{ project_container_path, INPUT_FILE }) catch |err| {
+    const file_path = std.fs.path.join(a, &.{ project_container_path, INPUT_FILE }) catch |err| {
         print("Couldn't join parts of the test scss file: {any}", .{err});
         return;
     };
+    defer a.free(file_path);
 
     // CSS File parsing
     const input_file = std.fs.cwd().openFile(file_path, .{ .mode = .read_only }) catch |err| {
@@ -68,21 +65,22 @@ pub fn main() !void {
         print("Error getting file stats: {any}\n", .{err});
         return;
     };
-    const buffer = aa.alloc(u8, file_stat.size) catch |err| {
+    const buffer = a.alloc(u8, file_stat.size) catch |err| {
         print("Couldn't allocate enough memory. Error: {any}\n", .{err});
         return;
     };
+    defer a.free(buffer);
 
     var r_impl = input_file.reader(buffer);
     const r = &r_impl.interface;
 
     var parsing_results = MultiArrayList(VarNameResult){};
-    defer parsing_results.deinit(aa);
+    defer parsing_results.deinit(a);
 
     while (r.takeDelimiterExclusive('\n')) |line| {
         const parse_res = get_var_name_value(line);
         if (parse_res) |_nm| {
-            parsing_results.append(aa, _nm) catch {};
+            parsing_results.append(a, _nm) catch {};
         } else |_| {
             continue;
         }
@@ -96,7 +94,7 @@ pub fn main() !void {
 
     // Generate TS file
     const cwd = std.fs.cwd();
-    cwd.makeDir(OUTPUT_DIR_PATH) catch |err| {
+    cwd.makeDir(config.output) catch |err| {
         switch (err) {
             std.posix.MakeDirError.PathAlreadyExists => print("Output directory already exists. OK.\n", .{}),
             else => {
@@ -106,10 +104,17 @@ pub fn main() !void {
         }
     };
 
-    var output_dir: std.fs.Dir = try cwd.openDir(OUTPUT_DIR_PATH, .{});
+    var output_dir: std.fs.Dir = try cwd.openDir(config.output, .{});
     defer output_dir.close();
 
-    const outputFile = try output_dir.createFile(OUTPUT_FILE, .{});
+    var output_file_name: []const u8 = OUTPUT_DEFAULT_FILE;
+    defer a.free(output_file_name);
+
+    if (config.file_name) |file_name| {
+        output_file_name = try std.mem.join(a, ".", &.{ file_name, DEFAULT_FILE_EXTENSION });
+    }
+
+    const outputFile = try output_dir.createFile(output_file_name, .{});
     defer outputFile.close();
 
     var out_writer_buf: [512]u8 = undefined;
@@ -124,11 +129,12 @@ pub fn main() !void {
         parsing_results.items(.name),
         parsing_results.items(.value),
     ) |name, value| {
-        const camelCaseName = css_var_to_camel_case(aa, name) catch {
+        const camelCaseName = css_var_to_camel_case(a, name) catch {
             print("- failed to convert to camel-case \"{s}\". SKIPPED\n", .{name});
             continue;
         };
         out_writer.print("  {s}: '{s}',\n", .{ camelCaseName, value }) catch {};
+        a.free(camelCaseName);
     }
 
     out_writer.print("}} as const;\n", .{}) catch {};

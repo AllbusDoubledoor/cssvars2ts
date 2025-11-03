@@ -5,6 +5,7 @@ const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
 
 const ConfigStructure = struct {
     output: []u8,
+    fileName: []u8,
 };
 
 pub const Config = struct {
@@ -16,6 +17,7 @@ pub const Config = struct {
     target_app_dir: []const u8,
 
     output: []const u8,
+    file_name: ?[]const u8 = null,
 
     pub fn init(a: std.mem.Allocator) !@This() {
         const bin = try std.fs.selfExeDirPathAlloc(a);
@@ -37,14 +39,19 @@ pub const Config = struct {
 
         const config_json: std.json.Parsed(ConfigStructure) = try std.json.parseFromSlice(ConfigStructure, a, config_file, .{ .ignore_unknown_fields = true });
         defer config_json.deinit();
+
         const output_buffer = try a.alloc(u8, config_json.value.output.len);
         @memmove(output_buffer, config_json.value.output);
+
+        const file_name_buffer = try a.alloc(u8, config_json.value.fileName.len);
+        @memmove(file_name_buffer, config_json.value.fileName);
 
         return .{
             .a = a,
             .lib_root = lib_root_buffer,
             .target_app_dir = target_app_dir_buffer,
             .output = output_buffer,
+            .file_name = file_name_buffer,
         };
     }
 
@@ -52,6 +59,9 @@ pub const Config = struct {
         self.a.free(self.lib_root);
         self.a.free(self.target_app_dir);
         self.a.free(self.output);
+        if (self.file_name) |file_name| {
+            self.a.free(file_name);
+        }
     }
 
     // TODO: consider some other stopping indicators, maybe .git file or node_modules

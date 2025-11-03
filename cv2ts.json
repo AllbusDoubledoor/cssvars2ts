@@ -1,3 +1,4 @@
 {
-    "output": "./src/types"
+    "output": "./types",
+    "fileName": "typesFromCss2TsVars"
 }
