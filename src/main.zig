@@ -10,7 +10,7 @@ const get_var_name_value = @import("./helpers/get_var_name_value.zig").get_var_n
 const VarNameResult = @import("./helpers/get_var_name_value.zig").VarNameResult;
 const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css_var_to_camel_case;
 
-const Config = @import("./Config.zig").Config;
+const Config = @import("./Config.zig");
 
 // TODO: take these out of config
 pub const CONFIG_FILE_NAME = "cv2ts.json";
