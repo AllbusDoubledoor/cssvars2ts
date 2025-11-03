@@ -12,11 +12,13 @@ const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css
 
 const Config = @import("./Config.zig").Config;
 
-// TODO: take these from config
+// TODO: take these out of config
 pub const CONFIG_FILE_NAME = "cv2ts.json";
 const INPUT_FILE = "./test.scss";
+
 const OUTPUT_DEFAULT_FILE: []const u8 = "cssProperties";
 const DEFAULT_FILE_EXTENSION: []const u8 = "ts";
+const DEFAULT_OUTPUT_OBJECT_NAME: []const u8 = "CssVariables";
 
 pub fn main() !void {
     var gpa = std.heap.DebugAllocator(.{}){};
@@ -69,11 +71,11 @@ pub fn main() !void {
     };
     defer input_file.close();
 
-    const file_stat = input_file.stat() catch |err| {
+    const input_file_stat = input_file.stat() catch |err| {
         print("Error getting file stats: {any}\n", .{err});
         return;
     };
-    const input_file_buffer = a.alloc(u8, file_stat.size) catch |err| {
+    const input_file_buffer = a.alloc(u8, input_file_stat.size) catch |err| {
         print("Couldn't allocate enough memory. Error: {any}\n", .{err});
         return;
     };
@@ -116,7 +118,7 @@ pub fn main() !void {
     var output_dir: std.fs.Dir = try cwd.openDir(config.output, .{});
     defer output_dir.close();
 
-    var output_file_name: []const u8 = OUTPUT_DEFAULT_FILE;
+    var output_file_name = OUTPUT_DEFAULT_FILE;
     defer a.free(output_file_name);
 
     if (config.file_name) |file_name| {
@@ -126,11 +128,16 @@ pub fn main() !void {
     const outputFile = try output_dir.createFile(output_file_name, .{});
     defer outputFile.close();
 
-    var out_writer_buf: [512]u8 = undefined;
-    var out_writer_impl = outputFile.writer(&out_writer_buf);
+    const out_writer_buf: []u8 = try a.alloc(u8, input_file_stat.size);
+    defer a.free(out_writer_buf);
+    var out_writer_impl = outputFile.writer(out_writer_buf);
     var out_writer = &out_writer_impl.interface;
 
-    out_writer.print("export const CssVariables = {{\n", .{}) catch |err| {
+    var output_object_name = DEFAULT_OUTPUT_OBJECT_NAME;
+    if (config.output_object_name) |custom_output_object_name| {
+        output_object_name = custom_output_object_name;
+    }
+    out_writer.print("export const {s} = {{\n", .{output_object_name}) catch |err| {
         print("Error writing to the output file: {any}\n", .{err});
     };
 

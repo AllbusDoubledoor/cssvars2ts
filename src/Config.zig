@@ -6,6 +6,7 @@ const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
 const ConfigStructure = struct {
     output: []u8,
     fileName: []u8,
+    outputObjectName: []u8,
 };
 
 pub const Config = struct {
@@ -18,6 +19,7 @@ pub const Config = struct {
 
     output: []const u8,
     file_name: ?[]const u8 = null,
+    output_object_name: ?[]const u8 = null,
 
     pub fn init(a: std.mem.Allocator) !@This() {
         const bin = try std.fs.selfExeDirPathAlloc(a);
@@ -46,12 +48,16 @@ pub const Config = struct {
         const file_name_buffer = try a.alloc(u8, config_json.value.fileName.len);
         @memmove(file_name_buffer, config_json.value.fileName);
 
+        const output_object_name_buffer = try a.alloc(u8, config_json.value.outputObjectName.len);
+        @memmove(output_object_name_buffer, config_json.value.outputObjectName);
+
         return .{
             .a = a,
             .lib_root = lib_root_buffer,
             .target_app_dir = target_app_dir_buffer,
             .output = output_buffer,
             .file_name = file_name_buffer,
+            .output_object_name = output_object_name_buffer,
         };
     }
 
@@ -61,6 +67,9 @@ pub const Config = struct {
         self.a.free(self.output);
         if (self.file_name) |file_name| {
             self.a.free(file_name);
+        }
+        if (self.output_object_name) |output_object_name| {
+            self.a.free(output_object_name);
         }
     }
 
