@@ -18,12 +18,6 @@ pub fn build(b: *std.Build) void {
         .root_module = mainModule,
     });
 
-    b.installDirectory(.{
-        .source_dir = b.path("src/test/assets"),
-        .install_dir = .{ .custom = "test" },
-        .install_subdir = "assets",
-    });
-
     b.installArtifact(exe);
 
     // Run
