@@ -12,8 +12,8 @@ const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css
 
 const Config = @import("./Config.zig");
 
-// TODO: take these out of config
 pub const CONFIG_FILE_NAME = "cv2ts.json";
+// TODO: take these out of config
 const INPUT_FILE = "./test.scss";
 
 const OUTPUT_DEFAULT_FILE: []const u8 = "cssProperties";
