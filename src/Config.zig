@@ -4,7 +4,6 @@ const print = std.debug.print;
 const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
 
 arena: std.heap.ArenaAllocator,
-allocator: std.mem.Allocator,
 
 /// Root of the built library which is "zig-out" directory
 lib_root: []const u8,
@@ -21,6 +20,11 @@ pub fn init(a: std.mem.Allocator) !@This() {
 
     const bin = try std.fs.selfExeDirPathAlloc(a);
     defer a.free(bin);
+
+    if (!try config_exists(a)) {
+        print("Config file wasn't found. Make sure it is in the current working directory.", .{});
+        return Error.ConfigNotFound;
+    }
 
     const zig_out = std.fs.path.dirname(bin) orelse bin;
     const lib_root_buffer = try allocator.alloc(u8, zig_out.len);
@@ -50,7 +54,6 @@ pub fn init(a: std.mem.Allocator) !@This() {
 
     return .{
         .arena = arena,
-        .allocator = allocator,
         .lib_root = lib_root_buffer,
         .target_app_dir = target_app_dir_buffer,
         .output = output_buffer,
@@ -84,8 +87,26 @@ fn get_app_root_path(start: []const u8) ![]const u8 {
     return cur_path;
 }
 
+fn config_exists(a: std.mem.Allocator) !bool {
+    const cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
+
+    var cwdWalker = try cwd.walk(a);
+    defer cwdWalker.deinit();
+
+    while (try cwdWalker.next()) |entry| {
+        if (entry.kind != .file) continue;
+
+        if (std.mem.eql(u8, entry.basename, CONFIG_FILE_NAME)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 pub const Error = error{
     AppRootNotFound,
+    ConfigNotFound,
 };
 
 const ConfigStructure = struct {
