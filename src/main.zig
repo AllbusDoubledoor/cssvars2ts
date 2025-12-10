@@ -13,9 +13,6 @@ const css_var_to_camel_case = @import("./helpers/css_var_to_camel_case.zig").css
 const Config = @import("./Config.zig");
 
 pub const CONFIG_FILE_NAME = "cv2ts.json";
-// TODO: take these out of config
-const INPUT_FILE = "./test.scss";
-
 const OUTPUT_DEFAULT_FILE: []const u8 = "cssProperties";
 const DEFAULT_FILE_EXTENSION: []const u8 = "ts";
 const DEFAULT_OUTPUT_OBJECT_NAME: []const u8 = "CssVariables";
@@ -42,6 +39,7 @@ pub fn main() !void {
         print("Config:\n", .{});
         print("    lib_root: {s}\n", .{config.lib_root});
         print("    target_app_dir: {s}\n", .{config.target_app_dir});
+        print("    input: {s}\n", .{config.input});
         print("    output: {s}\n", .{config.output});
     }
 
@@ -51,7 +49,7 @@ pub fn main() !void {
         print("project container: {s}\n", .{project_container_path});
     }
 
-    const file_path = std.fs.path.join(a, &.{ project_container_path, INPUT_FILE }) catch |err| {
+    const file_path = std.fs.path.join(a, &.{ project_container_path, config.input }) catch |err| {
         print("Couldn't join parts of the test scss file: {any}", .{err});
         return;
     };

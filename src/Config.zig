@@ -7,16 +7,17 @@ arena: std.heap.ArenaAllocator,
 
 /// Root of the built library which is "zig-out" directory
 lib_root: []const u8,
-/// Directory of the project where the lib is being used
+/// Directory of the project where the cv2ts is being used
 target_app_dir: []const u8,
 
+input: []const u8,
 output: []const u8,
 file_name: ?[]const u8 = null,
 output_object_name: ?[]const u8 = null,
 
 pub fn init(a: std.mem.Allocator) !@This() {
     var arena = std.heap.ArenaAllocator.init(a);
-    var allocator = arena.allocator();
+    var arena_a = arena.allocator();
 
     const bin = try std.fs.selfExeDirPathAlloc(a);
     defer a.free(bin);
@@ -27,11 +28,11 @@ pub fn init(a: std.mem.Allocator) !@This() {
     }
 
     const zig_out = std.fs.path.dirname(bin) orelse bin;
-    const lib_root_buffer = try allocator.alloc(u8, zig_out.len);
+    const lib_root_buffer = try arena_a.alloc(u8, zig_out.len);
     @memmove(lib_root_buffer, zig_out);
 
     const dir_containing_config = try get_app_root_path(zig_out);
-    const target_app_dir_buffer = try allocator.alloc(u8, dir_containing_config.len);
+    const target_app_dir_buffer = try arena_a.alloc(u8, dir_containing_config.len);
     @memmove(target_app_dir_buffer, dir_containing_config);
 
     const config_path: []u8 = try std.fs.path.join(a, &.{ target_app_dir_buffer, CONFIG_FILE_NAME });
@@ -43,19 +44,25 @@ pub fn init(a: std.mem.Allocator) !@This() {
     const config_json: std.json.Parsed(ConfigStructure) = try std.json.parseFromSlice(ConfigStructure, a, config_file, .{ .ignore_unknown_fields = true });
     defer config_json.deinit();
 
-    const output_buffer = try allocator.alloc(u8, config_json.value.output.len);
+    // TODO: add config file validation
+
+    const input_buffer = try arena_a.alloc(u8, config_json.value.input.len);
+    @memmove(input_buffer, config_json.value.input);
+
+    const output_buffer = try arena_a.alloc(u8, config_json.value.output.len);
     @memmove(output_buffer, config_json.value.output);
 
-    const file_name_buffer = try allocator.alloc(u8, config_json.value.fileName.len);
+    const file_name_buffer = try arena_a.alloc(u8, config_json.value.fileName.len);
     @memmove(file_name_buffer, config_json.value.fileName);
 
-    const output_object_name_buffer = try allocator.alloc(u8, config_json.value.outputObjectName.len);
+    const output_object_name_buffer = try arena_a.alloc(u8, config_json.value.outputObjectName.len);
     @memmove(output_object_name_buffer, config_json.value.outputObjectName);
 
     return .{
         .arena = arena,
         .lib_root = lib_root_buffer,
         .target_app_dir = target_app_dir_buffer,
+        .input = input_buffer,
         .output = output_buffer,
         .file_name = file_name_buffer,
         .output_object_name = output_object_name_buffer,
@@ -110,6 +117,7 @@ pub const Error = error{
 };
 
 const ConfigStructure = struct {
+    input: []u8,
     output: []u8,
     fileName: []u8,
     outputObjectName: []u8,
