@@ -1,4 +1,6 @@
 {
+    "input": "./test.scss",
     "output": "./types",
-    "fileName": "typesFromCss2TsVars"
+    "fileName": "cv2ts",
+    "outputObjectName": "CssVars"
 }

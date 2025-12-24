@@ -37,26 +37,12 @@ pub fn main() !void {
 
     if (builtin.mode == .Debug) {
         print("Config:\n", .{});
-        print("    lib_root: {s}\n", .{config.lib_root});
-        print("    target_app_dir: {s}\n", .{config.target_app_dir});
         print("    input: {s}\n", .{config.input});
         print("    output: {s}\n", .{config.output});
     }
 
-    const project_container_path = config.target_app_dir;
-
-    if (builtin.mode == .Debug) {
-        print("project container: {s}\n", .{project_container_path});
-    }
-
-    const file_path = std.fs.path.join(a, &.{ project_container_path, config.input }) catch |err| {
-        print("Couldn't join parts of the test scss file: {any}", .{err});
-        return;
-    };
-    defer a.free(file_path);
-
     // CSS File parsing
-    const input_file = std.fs.cwd().openFile(file_path, .{ .mode = .read_only }) catch |err| {
+    const input_file = std.fs.cwd().openFile(config.input, .{ .mode = .read_only }) catch |err| {
         switch (err) {
             error.FileNotFound => {
                 print("Could not find the file\n", .{});
@@ -82,6 +68,7 @@ pub fn main() !void {
     var r_impl = input_file.reader(input_file_buffer);
     const r = &r_impl.interface;
 
+    // Parsing css file
     var parsing_results = MultiArrayList(VarNameResult){};
     defer parsing_results.deinit(a);
 

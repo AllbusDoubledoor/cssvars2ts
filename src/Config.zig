@@ -5,11 +5,6 @@ const CONFIG_FILE_NAME = @import("./main.zig").CONFIG_FILE_NAME;
 
 arena: std.heap.ArenaAllocator,
 
-/// Root of the built library which is "zig-out" directory
-lib_root: []const u8,
-/// Directory of the project where the cv2ts is being used
-target_app_dir: []const u8,
-
 input: []const u8,
 output: []const u8,
 file_name: ?[]const u8 = null,
@@ -22,29 +17,13 @@ pub fn init(a: std.mem.Allocator) !@This() {
     const bin = try std.fs.selfExeDirPathAlloc(a);
     defer a.free(bin);
 
-    if (!try config_exists(a)) {
-        print("Config file wasn't found. Make sure it is in the current working directory.", .{});
-        return Error.ConfigNotFound;
-    }
-
-    const zig_out = std.fs.path.dirname(bin) orelse bin;
-    const lib_root_buffer = try arena_a.alloc(u8, zig_out.len);
-    @memmove(lib_root_buffer, zig_out);
-
-    const dir_containing_config = try get_app_root_path(zig_out);
-    const target_app_dir_buffer = try arena_a.alloc(u8, dir_containing_config.len);
-    @memmove(target_app_dir_buffer, dir_containing_config);
-
-    const config_path: []u8 = try std.fs.path.join(a, &.{ target_app_dir_buffer, CONFIG_FILE_NAME });
-    defer a.free(config_path);
+    const config_path = try get_config_file_path(arena_a);
 
     const config_file = try std.fs.cwd().readFileAlloc(a, config_path, 4048);
     defer a.free(config_file);
 
     const config_json: std.json.Parsed(ConfigStructure) = try std.json.parseFromSlice(ConfigStructure, a, config_file, .{ .ignore_unknown_fields = true });
     defer config_json.deinit();
-
-    // TODO: add config file validation
 
     const input_buffer = try arena_a.alloc(u8, config_json.value.input.len);
     @memmove(input_buffer, config_json.value.input);
@@ -60,8 +39,6 @@ pub fn init(a: std.mem.Allocator) !@This() {
 
     return .{
         .arena = arena,
-        .lib_root = lib_root_buffer,
-        .target_app_dir = target_app_dir_buffer,
         .input = input_buffer,
         .output = output_buffer,
         .file_name = file_name_buffer,
@@ -73,28 +50,7 @@ pub fn deinit(self: *@This()) void {
     self.arena.deinit();
 }
 
-// TODO: consider some other stopping indicators, maybe .git file or node_modules
-fn get_app_root_path(start: []const u8) ![]const u8 {
-    var cur_path = start[0..];
-
-    outer: while (cur_path.len != 0) {
-        var cur_dir = try std.fs.cwd().openDir(cur_path, .{ .iterate = true });
-        defer cur_dir.close();
-
-        var iter = cur_dir.iterate();
-        while (try iter.next()) |entry| {
-            if (std.mem.eql(u8, entry.name, CONFIG_FILE_NAME)) {
-                break :outer;
-            }
-        }
-
-        cur_path = std.fs.path.dirname(cur_path) orelse return Error.AppRootNotFound;
-    }
-
-    return cur_path;
-}
-
-fn config_exists(a: std.mem.Allocator) !bool {
+fn get_config_file_path(a: std.mem.Allocator) ![]const u8 {
     const cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
 
     var cwdWalker = try cwd.walk(a);
@@ -104,11 +60,14 @@ fn config_exists(a: std.mem.Allocator) !bool {
         if (entry.kind != .file) continue;
 
         if (std.mem.eql(u8, entry.basename, CONFIG_FILE_NAME)) {
-            return true;
+            const path_buffer = try a.alloc(u8, entry.path.len);
+            @memmove(path_buffer, entry.path);
+            return path_buffer;
         }
     }
 
-    return false;
+    print("Config file wasn't found. Make sure it is in the current working directory.", .{});
+    return Error.ConfigNotFound;
 }
 
 pub const Error = error{
