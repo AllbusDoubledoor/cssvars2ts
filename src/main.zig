@@ -72,20 +72,16 @@ pub fn main() !void {
     var parsing_results = MultiArrayList(VarNameResult){};
     defer parsing_results.deinit(a);
 
-    while (r.takeDelimiterExclusive('\n')) |line| {
+    while (try r.takeDelimiter('\n')) |line| {
         const parse_res = get_var_name_value(line);
         if (parse_res) |_nm| {
             parsing_results.append(a, _nm) catch {};
         } else |_| {
             continue;
         }
-    } else |err| {
-        if (err == error.EndOfStream) {
-            if (builtin.mode == .Debug)
-                print("File is read\n", .{});
-        } else {
-            print("Unkonwn error reading file: {any}\n", .{err});
-        }
+    } else {
+        if (builtin.mode == .Debug)
+            print("File is read\n", .{});
     }
 
     // Generate TS file
